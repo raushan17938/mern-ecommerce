@@ -58,8 +58,6 @@ export const chat = async (req, res) => {
         ).join("\n");
 
         // 3. Construct Dynamic Prompt
-        const model = genAI.getGenerativeModel({ model: "gemini-pro" });
-
         const systemContext = `
         You are Nova, a personal shopping assistant for SecureShop.
         
@@ -79,11 +77,51 @@ export const chat = async (req, res) => {
 
         const prompt = `${systemContext}\n\nUser: ${message}\nNova:`;
 
-        const result = await model.generateContent(prompt);
-        const response = await result.response;
-        const text = response.text();
+        // List of models to try in order of preference
+        const modelsToTry = [
+            "gemini-1.5-flash",
+            "gemini-1.5-flash-001",
+            "gemini-1.0-pro",
+            "gemini-pro",
+            "gemini-2.5-flash-lite" // Fallback if user only has experimental access
+        ];
 
-        res.json({ response: text });
+        let finalResponse = null;
+        let lastError = null;
+
+        for (const modelName of modelsToTry) {
+            try {
+                console.log(`Trying model: ${modelName}`);
+                const model = genAI.getGenerativeModel({ model: modelName });
+                const result = await model.generateContent(prompt);
+                const response = await result.response;
+                finalResponse = response.text();
+                break; // If successful, stop trying
+            } catch (error) {
+                console.log(`Failed with model ${modelName}:`, error.message);
+                lastError = error;
+
+                // If 429 (Quota Exceeded), likely stopping is better or continue? 
+                // If it's a specific model quota, maybe another model works.
+                // But generally 429 applies to the project/tier.
+                // However, ignoring 404s is crucial.
+                if (error.message.includes("429")) {
+                    // If we hit a rate limit, we might want to fail fast or try a cheaper model?
+                    // Let's continue trying other models just in case.
+                }
+            }
+        }
+
+        if (!finalResponse) {
+            if (lastError && lastError.message.includes("429")) {
+                return res.status(200).json({
+                    response: "I'm currently overwhelmed with too many requests (Rate Limit Exceeded). Please try again in a few seconds!"
+                });
+            }
+            throw new Error(`All models failed. Last error: ${lastError?.message}`);
+        }
+
+        res.json({ response: finalResponse });
     } catch (error) {
         console.error("Error in chatbot:", error);
         res.status(500).json({ error: "Failed to generate response", details: error.message });
