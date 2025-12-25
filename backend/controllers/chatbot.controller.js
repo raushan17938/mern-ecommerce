@@ -58,7 +58,7 @@ export const chat = async (req, res) => {
         ).join("\n");
 
         // 3. Construct Dynamic Prompt
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-001" });
 
         const systemContext = `
         You are Nova, a personal shopping assistant for SecureShop.
