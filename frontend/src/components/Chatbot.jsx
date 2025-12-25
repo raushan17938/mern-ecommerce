@@ -50,6 +50,9 @@ const Chatbot = () => {
 
             if (error.response?.status === 401) {
                 errorMessage = "Error: Unauthorized (401). Please try refreshing the page.";
+            } else if (error.response?.data?.details) {
+                // Show actual backend error if available (e.g. "API key invalid")
+                errorMessage = `Error: ${error.response.data.details}`;
             }
 
             setMessages((prev) => [
