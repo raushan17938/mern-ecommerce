@@ -3,7 +3,9 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+const resend = process.env.RESEND_API_KEY
+    ? new Resend(process.env.RESEND_API_KEY)
+    : null;
 
 const createEmailTemplate = (title, content, footerText) => `
 <!DOCTYPE html>
@@ -51,6 +53,11 @@ export const sendVerificationEmail = async (email, verificationToken) => {
             <p>If you didn't create an account, you can safely ignore this email.</p>
         `;
 
+        if (!resend) {
+            console.log("Resend API Key not found. Skipping verification email to:", email);
+            return;
+        }
+
         await resend.emails.send({
             from: "SecureShop <onboarding@resend.dev>",
             to: [email],
@@ -72,6 +79,11 @@ export const sendWelcomeEmail = async (email, name) => {
             <p>Start exploring our vast collection of products and enjoy a seamless shopping experience.</p>
             <a href="${process.env.CLIENT_URL}" class="button">Start Shopping</a>
         `;
+
+        if (!resend) {
+            console.log("Resend API Key not found. Skipping welcome email to:", email);
+            return;
+        }
 
         await resend.emails.send({
             from: "SecureShop <onboarding@resend.dev>",
@@ -95,6 +107,11 @@ export const sendPasswordResetEmail = async (email, resetURL) => {
             <div class="otp-box">${resetURL}</div>
             <p>If you didn't request a password reset, please ignore this email.</p>
         `;
+
+        if (!resend) {
+            console.log("Resend API Key not found. Skipping password reset email to:", email);
+            return;
+        }
 
         await resend.emails.send({
             from: "SecureShop <onboarding@resend.dev>",
